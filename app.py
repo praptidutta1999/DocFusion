@@ -1,17 +1,5 @@
 import gradio as gr
 
-try:
-    import spaces
-except ImportError:
-
-    class _SpacesFallback:
-        @staticmethod
-        def GPU(func):
-            return func
-
-    spaces = _SpacesFallback()
-
-
 # ==========================================
 # Load CSS
 # ==========================================
@@ -21,23 +9,21 @@ with open("style.css", "r", encoding="utf-8") as f:
 
 
 # ==========================================
-# ZeroGPU Functions
+# Functions
 # ==========================================
 
-
-@spaces.GPU
 def analyze(file):
     if file is None:
         return "Please upload a document."
 
-    return f"Uploaded : {file.name}"
+    return f"Uploaded: {file.name}"
 
 
 # ==========================================
 # UI
 # ==========================================
 
-with gr.Blocks(title="DocFusion AI") as demo:
+with gr.Blocks(title="DocFusion AI", css=css) as demo:
 
     # ======================================
     # Header
@@ -89,11 +75,18 @@ with gr.Blocks(title="DocFusion AI") as demo:
                 file_types=[".pdf", ".docx", ".txt", ".png", ".jpg"],
             )
 
-        # analyze_btn = gr.Button("Analyze Document", variant="primary")
+        analyze_btn = gr.Button("Analyze Document", variant="primary")
 
-        # status = gr.Textbox(label="Status", interactive=False)
+        status = gr.Textbox(
+            label="Status",
+            interactive=False
+        )
 
-        # analyze_btn.click(analyze, inputs=file, outputs=status)
+        analyze_btn.click(
+            fn=analyze,
+            inputs=file,
+            outputs=status
+        )
 
     # ======================================
     # What would you like to generate?
@@ -161,12 +154,13 @@ with gr.Blocks(title="DocFusion AI") as demo:
 
             </div>
             """)
-        # ======================================
-        # Small AI Tools
-        # ======================================
+
+    # ======================================
+    # Small AI Tools
+    # ======================================
 
     gr.HTML("""
-        <div class="small-tools">
+    <div class="small-tools">
 
         <div class="small-tool">
             ⭐ Key Points
@@ -188,16 +182,12 @@ with gr.Blocks(title="DocFusion AI") as demo:
             🕒 Timeline
         </div>
 
-        </div>
+    </div>
     """)
-    # ============================
-# 🤖 AI Workspace
-# ============================
 
-    # ==========================
-# 🤖 AI Workspace
-# ==========================
 
-   
+# ==========================================
+# Launch
+# ==========================================
 
-demo.launch(css=css)
+demo.launch()
