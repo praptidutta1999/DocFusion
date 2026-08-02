@@ -1,4 +1,5 @@
 import gradio as gr
+from Parser import PDFParser
 
 # ==========================================
 # Load CSS
@@ -13,10 +14,21 @@ with open("style.css", "r", encoding="utf-8") as f:
 # ==========================================
 
 def analyze(file):
+
     if file is None:
         return "Please upload a document."
 
-    return f"Uploaded: {file.name}"
+    parser = PDFParser(file.name)
+
+    result = parser.parse()
+
+    return f"""
+    File Name : {result['file_info']['file_name']}
+    Pages     : {result['statistics']['pages']}
+    Words     : {result['statistics']['words']}
+    Language  : {result['language']}
+    PDF Type  : {result['pdf_type']}
+    """
 
 
 # ==========================================

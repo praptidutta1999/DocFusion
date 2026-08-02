@@ -1,2 +1,5 @@
 spaces
 gradio
+pymupdf
+pdfplumber
+langdetect
