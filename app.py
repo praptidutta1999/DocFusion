@@ -1,5 +1,7 @@
 import gradio as gr
 from Parser import PDFParser
+import os
+
 
 # ==========================================
 # Load CSS
@@ -12,6 +14,34 @@ with open("style.css", "r", encoding="utf-8") as f:
 # ==========================================
 # Functions
 # ==========================================
+
+import os
+
+def show_uploaded_file(file):
+    if file is None:
+        return "No file uploaded."
+
+    size = os.path.getsize(file.name)
+
+    if size < 1024:
+        size_text = f"{size} Bytes"
+    elif size < 1024 * 1024:
+        size_text = f"{size/1024:.2f} KB"
+    else:
+        size_text = f"{size/(1024*1024):.2f} MB"
+
+    return f"""✅ File Uploaded Successfully
+
+📄 File Name : {os.path.basename(file.name)}
+📦 Size      : {size_text}
+"""
+
+
+
+
+
+
+
 
 def analyze(file):
 
@@ -35,8 +65,7 @@ def analyze(file):
 # UI
 # ==========================================
 
-with gr.Blocks(title="DocFusion AI", css=css) as demo:
-
+with gr.Blocks(title="DocFusion AI") as demo:
     # ======================================
     # Header
     # ======================================
@@ -86,6 +115,17 @@ with gr.Blocks(title="DocFusion AI", css=css) as demo:
                 file_count="single",
                 file_types=[".pdf", ".docx", ".txt", ".png", ".jpg"],
             )
+            
+            upload_status = gr.Textbox(
+                label="Uploaded File",
+                 interactive=False
+                )
+            file.change(
+                    fn=show_uploaded_file,
+                    inputs=file,
+                    outputs=upload_status
+                    )
+
 
         analyze_btn = gr.Button("Analyze Document", variant="primary")
 
@@ -202,4 +242,4 @@ with gr.Blocks(title="DocFusion AI", css=css) as demo:
 # Launch
 # ==========================================
 
-demo.launch()
+demo.launch(css=css)
