@@ -472,3 +472,306 @@ Gradio outer textbox container.
         margin-bottom: 10px;
     }
 }
+
+/* =========================================================
+   DOCFUSION AI WORKSPACE
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   Page containers
+   --------------------------------------------------------- */
+
+.home-page,
+.workspace-page {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+
+/* ---------------------------------------------------------
+   Make the Summary card a real clickable Gradio button
+   --------------------------------------------------------- */
+
+.tool-card-button {
+    min-height: 112px !important;
+    text-align: left !important;
+    cursor: pointer !important;
+}
+
+.tool-card-button button {
+    text-align: left !important;
+}
+
+.tool-card-button:hover {
+    transform: translateY(-2px);
+}
+
+
+/* ---------------------------------------------------------
+   Workspace
+   --------------------------------------------------------- */
+
+.workspace-page {
+    padding: 12px 0 50px;
+}
+
+
+/* ---------------------------------------------------------
+   Workspace top bar
+   --------------------------------------------------------- */
+
+.workspace-topbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    margin-bottom: 30px !important;
+}
+
+.back-button {
+    width: auto !important;
+    min-width: 90px !important;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}
+
+.back-button:hover {
+    border-color: #7c3aed !important;
+    color: #7c3aed !important;
+}
+
+.workspace-title {
+    flex: 1;
+}
+
+.workspace-title h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.workspace-title p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+
+/* ---------------------------------------------------------
+   Workspace tool header
+   --------------------------------------------------------- */
+
+.workspace-tool-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.workspace-tool-icon {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: #f3e8ff;
+    font-size: 24px;
+}
+
+.workspace-tool-header h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.workspace-tool-header p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+
+/* ---------------------------------------------------------
+   Summary result card
+   --------------------------------------------------------- */
+
+.summary-result-card {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 20px !important;
+    padding: 28px !important;
+    box-shadow:
+        0 12px 35px rgba(15, 23, 42, 0.07) !important;
+}
+
+.summary-result-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.summary-result-header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 19px;
+    font-weight: 700;
+}
+
+.summary-result-header p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.ai-badge {
+    white-space: nowrap;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: #f3e8ff;
+    color: #7c3aed;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* ---------------------------------------------------------
+   Generated summary
+   --------------------------------------------------------- */
+
+.summary-output {
+    min-height: 320px !important;
+    color: #334155 !important;
+    font-size: 15px !important;
+    line-height: 1.8 !important;
+}
+
+.summary-output p {
+    margin-bottom: 16px;
+}
+
+.summary-output h1,
+.summary-output h2,
+.summary-output h3 {
+    color: #0f172a;
+}
+
+.summary-output ul,
+.summary-output ol {
+    padding-left: 24px;
+}
+
+.summary-output li {
+    margin-bottom: 8px;
+}
+
+
+/* ---------------------------------------------------------
+   Workspace actions
+   --------------------------------------------------------- */
+
+.workspace-actions {
+    margin-top: 16px !important;
+    justify-content: flex-end !important;
+}
+
+.workspace-action-button {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Model information
+   --------------------------------------------------------- */
+
+.model-info-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.model-info-item {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.model-info-label {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.model-info-value {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* ---------------------------------------------------------
+   Home error/status
+   --------------------------------------------------------- */
+
+.home-status {
+    margin-top: 14px;
+}
+
+
+/* ---------------------------------------------------------
+   Responsive workspace
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .workspace-page {
+        padding: 8px 0 35px;
+    }
+
+    .workspace-title h1 {
+        font-size: 24px;
+    }
+
+    .workspace-tool-header h2 {
+        font-size: 19px;
+    }
+
+    .summary-result-card {
+        padding: 20px !important;
+    }
+
+    .summary-result-header {
+        flex-direction: column;
+    }
+
+    .model-info-card {
+        flex-direction: column;
+    }
+
+    .workspace-actions {
+        justify-content: stretch !important;
+    }
+
+    .workspace-action-button {
+        width: 100% !important;
+    }
+}

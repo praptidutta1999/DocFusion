@@ -1,18 +1,173 @@
 import gradio as gr
 import os
+import requests
+import tempfile
+
+from Parser import DocumentParser
+
+# =========================================================
+# COLAB BACKEND
+# =========================================================
+
+COLAB_API = "https://recolor-outshine-chest.ngrok-free.dev"
 
 
-# ==========================================
-# Load CSS
-# ==========================================
+# =========================================================
+# LOAD CSS
+# =========================================================
 
 with open("style.css", "r", encoding="utf-8") as f:
     css = f.read()
 
 
-# ==========================================
-# Functions
-# ==========================================
+# =========================================================
+# BACKEND FUNCTIONS
+# =========================================================
+
+def generate_summary(file, pasted_text):
+    """
+    Parse the uploaded document / pasted text locally,
+    send only extracted text to the Colab BART API,
+    and return the generated summary.
+    """
+
+    try:
+        # -------------------------------------------------
+        # Determine input
+        # -------------------------------------------------
+
+        if pasted_text and pasted_text.strip():
+
+            parser = DocumentParser(
+                text=pasted_text
+            )
+
+        elif file is not None:
+
+            parser = DocumentParser(
+                file_path=file.name
+            )
+
+        else:
+
+            raise ValueError(
+                "Please upload a PDF, DOCX, TXT file, "
+                "or paste some text first."
+            )
+
+        # -------------------------------------------------
+        # Parse locally
+        # -------------------------------------------------
+
+        result = parser.parse()
+
+        document_text = result.get(
+            "text",
+            ""
+        ).strip()
+
+        if not document_text:
+
+            raise ValueError(
+                "No readable text could be extracted "
+                "from the provided content."
+            )
+
+        # -------------------------------------------------
+        # Send extracted text to Colab
+        # -------------------------------------------------
+
+        response = requests.post(
+            f"{COLAB_API}/summarize",
+            json={
+                "text": document_text
+            },
+            timeout=300
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not data.get("success"):
+
+            raise RuntimeError(
+                data.get(
+                    "error",
+                    "Summarization failed."
+                )
+            )
+
+        summary = data.get(
+            "summary",
+            ""
+        ).strip()
+
+        if not summary:
+
+            raise RuntimeError(
+                "The summarization service returned "
+                "an empty summary."
+            )
+
+        # -------------------------------------------------
+        # Create downloadable text file
+        # -------------------------------------------------
+
+        summary_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".txt",
+            prefix="docfusion_summary_",
+            delete=False,
+            encoding="utf-8"
+        )
+
+        summary_file.write(summary)
+        summary_file.close()
+
+        # -------------------------------------------------
+        # Open workspace
+        # -------------------------------------------------
+
+        return (
+            summary,
+            summary_file.name,
+            gr.update(visible=False),
+            gr.update(visible=True),
+            ""
+        )
+
+    except requests.exceptions.RequestException as e:
+
+        return (
+            f"### Connection Error\n\n"
+            f"Could not connect to the Colab backend.\n\n"
+            f"`{str(e)}`\n\n"
+            f"Make sure your Colab notebook and ngrok tunnel "
+            f"are still running.",
+            None,
+            gr.update(visible=True),
+            gr.update(visible=False),
+            "Colab connection failed."
+        )
+
+    except Exception as e:
+
+        return (
+            f"### Error\n\n{str(e)}",
+            None,
+            gr.update(visible=True),
+            gr.update(visible=False),
+            "Something went wrong."
+        )
+
+
+def go_back_home():
+    return (
+        gr.update(visible=True),
+        gr.update(visible=False)
+    )
+
 
 def show_uploaded_file(file):
     if file is None:
@@ -63,198 +218,317 @@ def show_pasted_text(text):
     """
 
 
-# ==========================================
+# =========================================================
 # UI
-# ==========================================
+# =========================================================
 
-with gr.Blocks(title="DocFusion AI") as demo:
+with gr.Blocks(
+    title="DocFusion AI"
+) as demo:
 
-    # ======================================
-    # Header
-    # ======================================
+    # =====================================================
+    # HOME PAGE
+    # =====================================================
 
-    gr.HTML("""
-    <div class="header">
-        <h1>📄 DocFusion AI</h1>
-        <p>Upload a document or paste your text and let AI do the rest.</p>
-    </div>
-    """)
+    with gr.Column(
+        visible=True,
+        elem_classes="home-page"
+    ) as home_page:
 
-
-    # ======================================
-    # Input Card
-    # ======================================
-
-    with gr.Column(elem_classes="main-card"):
+        # -------------------------------------------------
+        # Header
+        # -------------------------------------------------
 
         gr.HTML("""
-        <div class="input-heading">
-            <h2>Add your content</h2>
-            <p>Paste your text or attach a PDF, DOCX, or TXT file.</p>
+        <div class="header">
+            <h1>📄 DocFusion AI</h1>
+            <p>Upload a document or paste your text and let AI do the rest.</p>
         </div>
         """)
 
-        # ==============================================
-        # Compact Unified Input
-        # ==============================================
+        # -------------------------------------------------
+        # Input Card
+        # -------------------------------------------------
 
-        with gr.Row(elem_classes="compact-input-wrapper"):
+        with gr.Column(
+            elem_classes="main-card"
+        ):
 
-            # Use Gradio's native UploadButton.
-            # This is more reliable than manually calling a hidden
-            # <input type="file"> with JavaScript.
-            upload_file = gr.UploadButton(
-                "+",
-                file_types=[".pdf", ".docx", ".txt"],
-                file_count="single",
-                elem_classes="plus-button"
+            gr.HTML("""
+            <div class="input-heading">
+                <h2>Add your content</h2>
+                <p>Paste your text or attach a PDF, DOCX, or TXT file.</p>
+            </div>
+            """)
+
+            with gr.Row(
+                elem_classes="compact-input-wrapper"
+            ):
+
+                upload_file = gr.UploadButton(
+                    "+",
+                    file_types=[
+                        ".pdf",
+                        ".docx",
+                        ".txt"
+                    ],
+                    file_count="single",
+                    elem_classes="plus-button"
+                )
+
+                pasted_text = gr.Textbox(
+                    placeholder="Ask anything",
+                    lines=1,
+                    max_lines=1,
+                    show_label=False,
+                    container=False,
+                    elem_classes="compact-textbox"
+                )
+
+            upload_status = gr.HTML(
+                "",
+                elem_classes="upload-status"
             )
 
-            pasted_text = gr.Textbox(
-                placeholder="Ask anything",
-                lines=1,
-                max_lines=1,
-                show_label=False,
-                container=False,
-                elem_classes="compact-textbox"
+            paste_status = gr.HTML(
+                "",
+                elem_classes="paste-status"
             )
 
-        # ==============================================
-        # Content Status
-        # ==============================================
+            upload_file.upload(
+                fn=show_uploaded_file,
+                inputs=upload_file,
+                outputs=upload_status
+            )
 
-        upload_status = gr.HTML(
+            pasted_text.change(
+                fn=show_pasted_text,
+                inputs=pasted_text,
+                outputs=paste_status
+            )
+
+        # -------------------------------------------------
+        # Generation Section
+        # -------------------------------------------------
+
+        gr.HTML("""
+        <div class="generate-header">
+            <h2>What would you like to generate?</h2>
+            <p>AI suggestions based on your content</p>
+        </div>
+        """)
+
+        with gr.Row(
+            equal_height=True
+        ):
+
+            # =============================================
+            # SUMMARY
+            # =============================================
+
+            summary_button = gr.Button(
+                value="📄  Summary",
+                elem_classes="tool-card tool-card-button"
+            )
+
+            # =============================================
+            # IMAGE
+            # =============================================
+
+            gr.Button(
+                value="🖼️  Generate Image",
+                elem_classes="tool-card tool-card-button"
+            )
+
+            # =============================================
+            # SPEECH
+            # =============================================
+
+            gr.Button(
+                value="🔊  Text to Speech",
+                elem_classes="tool-card tool-card-button"
+            )
+
+        # -------------------------------------------------
+        # Small AI Tools
+        # -------------------------------------------------
+
+        gr.HTML("""
+        <div class="small-tools">
+
+            <div class="small-tool">⭐ Key Points</div>
+            <div class="small-tool">🧠 Mind Map</div>
+            <div class="small-tool">🌐 Translate</div>
+            <div class="small-tool">💬 Q&A</div>
+            <div class="small-tool">🕒 Timeline</div>
+
+        </div>
+        """)
+
+        home_status = gr.HTML(
             "",
-            elem_classes="upload-status"
+            elem_classes="home-status"
         )
 
-        paste_status = gr.HTML(
-            "",
-            elem_classes="paste-status"
-        )
+    # =====================================================
+    # AI WORKSPACE
+    # =====================================================
 
-        # ==============================================
-        # Input Events
-        # ==============================================
+    with gr.Column(
+        visible=False,
+        elem_classes="workspace-page"
+    ) as workspace_page:
 
-        upload_file.upload(
-            fn=show_uploaded_file,
-            inputs=upload_file,
-            outputs=upload_status
-        )
+        # -------------------------------------------------
+        # Workspace Top Bar
+        # -------------------------------------------------
 
-        pasted_text.change(
-            fn=show_pasted_text,
-            inputs=pasted_text,
-            outputs=paste_status
-        )
-
-
-    # ==========================================
-    # What would you like to generate?
-    # ==========================================
-
-    gr.HTML("""
-    <div class="generate-header">
-        <h2>What would you like to generate?</h2>
-        <p>AI suggestions based on your content</p>
-    </div>
-    """)
-
-    with gr.Row(equal_height=True):
-
-        # ======================================
-        # Summary
-        # ======================================
-
-        with gr.Column(
-            scale=1,
-            min_width=180,
-            elem_classes="tool-card"
+        with gr.Row(
+            elem_classes="workspace-topbar"
         ):
 
+            back_button = gr.Button(
+                "← Back",
+                elem_classes="back-button"
+            )
+
             gr.HTML("""
-            <div class="tool-content">
-                <div class="tool-icon purple">📄</div>
-
-                <div class="tool-info">
-                    <div class="tool-title">Summary</div>
-
-                    <div class="tool-description">
-                        Get a clear and concise summary of this content.
-                    </div>
-                </div>
+            <div class="workspace-title">
+                <h1>AI Workspace</h1>
+                <p>DocFusion AI</p>
             </div>
             """)
 
-        # ======================================
-        # Generate Image
-        # ======================================
+        # -------------------------------------------------
+        # Workspace Tool Header
+        # -------------------------------------------------
+
+        gr.HTML("""
+        <div class="workspace-tool-header">
+
+            <div class="workspace-tool-icon">
+                📄
+            </div>
+
+            <div>
+                <h2>Document Summary</h2>
+                <p>
+                    AI-generated summary powered by
+                    DocFusion AI
+                </p>
+            </div>
+
+        </div>
+        """)
+
+        # -------------------------------------------------
+        # Summary Result
+        # -------------------------------------------------
 
         with gr.Column(
-            scale=1,
-            min_width=180,
-            elem_classes="tool-card"
+            elem_classes="summary-result-card"
         ):
 
             gr.HTML("""
-            <div class="tool-content">
-                <div class="tool-icon green">🖼️</div>
+            <div class="summary-result-header">
 
-                <div class="tool-info">
-                    <div class="tool-title">Generate Image</div>
-
-                    <div class="tool-description">
-                        Create relevant images, diagrams or infographics.
-                    </div>
+                <div>
+                    <h3>Generated Summary</h3>
+                    <p>
+                        A concise representation of your document
+                    </p>
                 </div>
+
+                <div class="ai-badge">
+                    AI Generated
+                </div>
+
             </div>
             """)
 
-        # ======================================
-        # Text to Speech
-        # ======================================
+            summary_output = gr.Markdown(
+                value="Your summary will appear here.",
+                elem_classes="summary-output"
+            )
 
-        with gr.Column(
-            scale=1,
-            min_width=180,
-            elem_classes="tool-card"
+        # -------------------------------------------------
+        # Workspace Actions
+        # -------------------------------------------------
+
+        with gr.Row(
+            elem_classes="workspace-actions"
         ):
 
-            gr.HTML("""
-            <div class="tool-content">
-                <div class="tool-icon orange">🔊</div>
+            download_summary = gr.DownloadButton(
+                "⬇️ Download Summary",
+                value=None,
+                elem_classes="workspace-action-button"
+            )
 
-                <div class="tool-info">
-                    <div class="tool-title">Text to Speech</div>
+        # -------------------------------------------------
+        # Model Information
+        # -------------------------------------------------
 
-                    <div class="tool-description">
-                        Listen to this content with a natural AI voice.
-                    </div>
-                </div>
+        gr.HTML("""
+        <div class="model-info-card">
+
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">
+                    BART-large-CNN
+                </span>
             </div>
-            """)
+
+            <div class="model-info-item">
+                <span class="model-info-label">Inference</span>
+                <span class="model-info-value">
+                    Colab Backend
+                </span>
+            </div>
+
+            <div class="model-info-item">
+                <span class="model-info-label">Task</span>
+                <span class="model-info-value">
+                    Abstractive Summarization
+                </span>
+            </div>
+
+        </div>
+        """)
+
+    # =====================================================
+    # EVENTS
+    # =====================================================
+
+    summary_button.click(
+        fn=generate_summary,
+        inputs=[
+            upload_file,
+            pasted_text
+        ],
+        outputs=[
+            summary_output,
+            download_summary,
+            home_page,
+            workspace_page,
+            home_status
+        ]
+    )
+
+    back_button.click(
+        fn=go_back_home,
+        inputs=[],
+        outputs=[
+            home_page,
+            workspace_page
+        ]
+    )
 
 
-    # ==========================================
-    # Small AI Tools
-    # ==========================================
+# =========================================================
+# LAUNCH
+# =========================================================
 
-    gr.HTML("""
-    <div class="small-tools">
-
-        <div class="small-tool">⭐ Key Points</div>
-        <div class="small-tool">🧠 Mind Map</div>
-        <div class="small-tool">🌐 Translate</div>
-        <div class="small-tool">💬 Q&A</div>
-        <div class="small-tool">🕒 Timeline</div>
-
-    </div>
-    """)
-
-
-# ==========================================
-# Launch
-# ==========================================
-
-demo.launch(css=css)
+demo.launch(
+    css=css
+)
