@@ -1,5 +1,4 @@
 import gradio as gr
-from Parser import PDFParser
 import os
 
 
@@ -15,49 +14,52 @@ with open("style.css", "r", encoding="utf-8") as f:
 # Functions
 # ==========================================
 
-import os
-
 def show_uploaded_file(file):
     if file is None:
-        return "No file uploaded."
+        return ""
 
     size = os.path.getsize(file.name)
 
     if size < 1024:
         size_text = f"{size} Bytes"
     elif size < 1024 * 1024:
-        size_text = f"{size/1024:.2f} KB"
+        size_text = f"{size / 1024:.2f} KB"
     else:
-        size_text = f"{size/(1024*1024):.2f} MB"
-
-    return f"""✅ File Uploaded Successfully
-
-📄 File Name : {os.path.basename(file.name)}
-📦 Size      : {size_text}
-"""
-
-
-
-
-
-
-
-
-def analyze(file):
-
-    if file is None:
-        return "Please upload a document."
-
-    parser = PDFParser(file.name)
-
-    result = parser.parse()
+        size_text = f"{size / (1024 * 1024):.2f} MB"
 
     return f"""
-    File Name : {result['file_info']['file_name']}
-    Pages     : {result['statistics']['pages']}
-    Words     : {result['statistics']['words']}
-    Language  : {result['language']}
-    PDF Type  : {result['pdf_type']}
+    <div class="attachment-card">
+        <div class="attachment-icon">📄</div>
+        <div class="attachment-info">
+            <div class="attachment-title">
+                File Uploaded Successfully
+            </div>
+            <div class="attachment-details">
+                <span>{os.path.basename(file.name)}</span>
+                <span>•</span>
+                <span>{size_text}</span>
+            </div>
+        </div>
+    </div>
+    """
+
+
+def show_pasted_text(text):
+    if not text or not text.strip():
+        return ""
+
+    words = len(text.split())
+    characters = len(text)
+
+    return f"""
+    <div class="text-ready-status">
+        <span>✓</span>
+        <span>Text ready</span>
+        <span>•</span>
+        <span>{words} words</span>
+        <span>•</span>
+        <span>{characters} characters</span>
+    </div>
     """
 
 
@@ -66,6 +68,7 @@ def analyze(file):
 # ==========================================
 
 with gr.Blocks(title="DocFusion AI") as demo:
+
     # ======================================
     # Header
     # ======================================
@@ -73,109 +76,129 @@ with gr.Blocks(title="DocFusion AI") as demo:
     gr.HTML("""
     <div class="header">
         <h1>📄 DocFusion AI</h1>
-        <p>Upload your document and let AI do the rest.</p>
+        <p>Upload a document or paste your text and let AI do the rest.</p>
     </div>
     """)
 
+
     # ======================================
-    # Upload Card
+    # Input Card
     # ======================================
 
     with gr.Column(elem_classes="main-card"):
 
-        with gr.Group(elem_classes="upload-wrapper"):
+        gr.HTML("""
+        <div class="input-heading">
+            <h2>Add your content</h2>
+            <p>Paste your text or attach a PDF, DOCX, or TXT file.</p>
+        </div>
+        """)
 
-            gr.HTML("""
-            <div class="upload-box">
+        # ==============================================
+        # Compact Unified Input
+        # ==============================================
 
-                <div class="upload-icon">↑</div>
+        with gr.Row(elem_classes="compact-input-wrapper"):
 
-                <div class="upload-title">
-                    Drag & Drop your file here
-                </div>
-
-                <div class="upload-subtitle">
-                    or click anywhere to browse
-                </div>
-
-                <div class="file-badges">
-                    <span>PDF</span>
-                    <span>DOCX</span>
-                    <span>TXT</span>
-                    <span>PNG</span>
-                    <span>JPG</span>
-                </div>
-
-            </div>
-            """)
-
-            file = gr.File(
-                label="",
-                elem_id="real_upload",
+            # Use Gradio's native UploadButton.
+            # This is more reliable than manually calling a hidden
+            # <input type="file"> with JavaScript.
+            upload_file = gr.UploadButton(
+                "+",
+                file_types=[".pdf", ".docx", ".txt"],
                 file_count="single",
-                file_types=[".pdf", ".docx", ".txt", ".png", ".jpg"],
+                elem_classes="plus-button"
             )
-            
-            upload_status = gr.Textbox(
-                label="Uploaded File",
-                 interactive=False
-                )
-            file.change(
-                    fn=show_uploaded_file,
-                    inputs=file,
-                    outputs=upload_status
-                    )
 
+            pasted_text = gr.Textbox(
+                placeholder="Ask anything",
+                lines=1,
+                max_lines=1,
+                show_label=False,
+                container=False,
+                elem_classes="compact-textbox"
+            )
 
-        analyze_btn = gr.Button("Analyze Document", variant="primary")
+        # ==============================================
+        # Content Status
+        # ==============================================
 
-        status = gr.Textbox(
-            label="Status",
-            interactive=False
+        upload_status = gr.HTML(
+            "",
+            elem_classes="upload-status"
         )
 
-        analyze_btn.click(
-            fn=analyze,
-            inputs=file,
-            outputs=status
+        paste_status = gr.HTML(
+            "",
+            elem_classes="paste-status"
         )
 
-    # ======================================
+        # ==============================================
+        # Input Events
+        # ==============================================
+
+        upload_file.upload(
+            fn=show_uploaded_file,
+            inputs=upload_file,
+            outputs=upload_status
+        )
+
+        pasted_text.change(
+            fn=show_pasted_text,
+            inputs=pasted_text,
+            outputs=paste_status
+        )
+
+
+    # ==========================================
     # What would you like to generate?
-    # ======================================
+    # ==========================================
 
     gr.HTML("""
     <div class="generate-header">
         <h2>What would you like to generate?</h2>
-        <p>AI suggestions based on your document</p>
+        <p>AI suggestions based on your content</p>
     </div>
     """)
 
     with gr.Row(equal_height=True):
 
-        with gr.Column(scale=1, min_width=180, elem_classes="tool-card"):
+        # ======================================
+        # Summary
+        # ======================================
+
+        with gr.Column(
+            scale=1,
+            min_width=180,
+            elem_classes="tool-card"
+        ):
 
             gr.HTML("""
             <div class="tool-content">
-
                 <div class="tool-icon purple">📄</div>
 
                 <div class="tool-info">
                     <div class="tool-title">Summary</div>
 
                     <div class="tool-description">
-                        Get a clear and concise summary of this document.
+                        Get a clear and concise summary of this content.
                     </div>
                 </div>
-
             </div>
             """)
 
-        with gr.Column(scale=1, min_width=180, elem_classes="tool-card"):
+        # ======================================
+        # Generate Image
+        # ======================================
+
+        with gr.Column(
+            scale=1,
+            min_width=180,
+            elem_classes="tool-card"
+        ):
 
             gr.HTML("""
             <div class="tool-content">
-
                 <div class="tool-icon green">🖼️</div>
 
                 <div class="tool-info">
@@ -185,15 +208,21 @@ with gr.Blocks(title="DocFusion AI") as demo:
                         Create relevant images, diagrams or infographics.
                     </div>
                 </div>
-
             </div>
             """)
 
-        with gr.Column(scale=1, min_width=180, elem_classes="tool-card"):
+        # ======================================
+        # Text to Speech
+        # ======================================
+
+        with gr.Column(
+            scale=1,
+            min_width=180,
+            elem_classes="tool-card"
+        ):
 
             gr.HTML("""
             <div class="tool-content">
-
                 <div class="tool-icon orange">🔊</div>
 
                 <div class="tool-info">
@@ -203,36 +232,22 @@ with gr.Blocks(title="DocFusion AI") as demo:
                         Listen to this content with a natural AI voice.
                     </div>
                 </div>
-
             </div>
             """)
 
-    # ======================================
+
+    # ==========================================
     # Small AI Tools
-    # ======================================
+    # ==========================================
 
     gr.HTML("""
     <div class="small-tools">
 
-        <div class="small-tool">
-            ⭐ Key Points
-        </div>
-
-        <div class="small-tool">
-            🧠 Mind Map
-        </div>
-
-        <div class="small-tool">
-            🌐 Translate
-        </div>
-
-        <div class="small-tool">
-            💬 Q&A
-        </div>
-
-        <div class="small-tool">
-            🕒 Timeline
-        </div>
+        <div class="small-tool">⭐ Key Points</div>
+        <div class="small-tool">🧠 Mind Map</div>
+        <div class="small-tool">🌐 Translate</div>
+        <div class="small-tool">💬 Q&A</div>
+        <div class="small-tool">🕒 Timeline</div>
 
     </div>
     """)

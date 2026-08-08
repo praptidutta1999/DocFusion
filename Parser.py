@@ -2,219 +2,681 @@ import os
 import re
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import fitz
 import pdfplumber
+from docx import Document
 from langdetect import detect, LangDetectException
 
 
-class PDFParser:
-    SUPPORTED_EXTENSIONS = {".pdf"}
+class DocumentParser:
 
-    def __init__(self, pdf_path):
-        self.pdf_path = str(pdf_path)
-        self.file_path = Path(pdf_path)
+    # ==========================================================
+    # Supported Files
+    # ==========================================================
+
+    SUPPORTED_EXTENSIONS = {
+        ".pdf",
+        ".docx",
+        ".txt"
+    }
+
+    # ==========================================================
+    # Initialization
+    # ==========================================================
+
+    def __init__(self, file_path=None, text=None):
+
+        self.file_path = (
+            Path(file_path)
+            if file_path
+            else None
+        )
+
+        self.text_input = text
+
+        self.extension = (
+            self.file_path.suffix.lower()
+            if self.file_path
+            else None
+        )
+
         self.doc = None
 
-    # ----------------------------
-    # Validation
-    # ----------------------------
-    def validate_file(self):
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"{self.file_path} not found.")
+    # ==========================================================
+    # File Validation
+    # ==========================================================
 
-        if self.file_path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError("Only PDF files are supported.")
+    def validate_file(self):
+
+        if self.file_path is None:
+            raise ValueError("No file provided.")
+
+        if not self.file_path.exists():
+            raise FileNotFoundError(
+                f"File not found: {self.file_path}"
+            )
+
+        if not self.file_path.is_file():
+            raise ValueError(
+                "Provided path is not a file."
+            )
+
+        if self.extension not in self.SUPPORTED_EXTENSIONS:
+            raise ValueError(
+                f"Unsupported file type: {self.extension}. "
+                "Supported formats: PDF, DOCX and TXT."
+            )
+
+        if self.file_path.stat().st_size == 0:
+            raise ValueError(
+                "The uploaded file is empty."
+            )
 
         return True
 
-    # ----------------------------
-    # Open PDF
-    # ----------------------------
-    def open_pdf(self):
-        self.doc = fitz.open(self.pdf_path)
-        return self.doc
+    # ==========================================================
+    # Text Validation
+    # ==========================================================
 
-    # ----------------------------
-    # Metadata
-    # ----------------------------
-    def extract_metadata(self):
-        meta = self.doc.metadata or {}
-        return {
-            "title": meta.get("title"),
-            "author": meta.get("author"),
-            "creator": meta.get("creator"),
-            "producer": meta.get("producer"),
-            "subject": meta.get("subject"),
-            "keywords": meta.get("keywords"),
-        }
+    def validate_text(self):
 
-    # ----------------------------
+        if self.text_input is None:
+            raise ValueError(
+                "No text was provided."
+            )
+
+        if not self.text_input.strip():
+            raise ValueError(
+                "The pasted text is empty."
+            )
+
+        return True
+
+    # ==========================================================
     # Text Cleaning
-    # ----------------------------
+    # ==========================================================
+
     def clean_text(self, text):
-        text = re.sub(r"[ \t]+", " ", text)
-        text = re.sub(r"\n{2,}", "\n", text)
+
+        if not text:
+            return ""
+
+        # Normalize line endings
+        text = text.replace(
+            "\r\n",
+            "\n"
+        )
+
+        text = text.replace(
+            "\r",
+            "\n"
+        )
+
+        # Remove excessive spaces/tabs
+        text = re.sub(
+            r"[ \t]+",
+            " ",
+            text
+        )
+
+        # Remove excessive blank lines
+        text = re.sub(
+            r"\n{2,}",
+            "\n",
+            text
+        )
+
+        # Remove spaces around line breaks
+        text = re.sub(
+            r" *\n *",
+            "\n",
+            text
+        )
+
         return text.strip()
 
-    # ----------------------------
-    # Text Extraction
-    # ----------------------------
-    def extract_text(self):
-        pages = []
-        full_text = []
+    # ==========================================================
+    # PDF Extraction
+    # ==========================================================
 
-        for i, page in enumerate(self.doc):
-            txt = self.clean_text(page.get_text("text"))
-            pages.append(
-                {
-                    "page": i + 1,
-                    "text": txt
-                }
+    def parse_pdf(self):
+
+        try:
+
+            self.doc = fitz.open(
+                str(self.file_path)
             )
-            full_text.append(txt)
 
-        return pages, "\n".join(full_text)
+            if self.doc.page_count == 0:
+                raise ValueError(
+                    "The PDF contains no pages."
+                )
 
-    # ----------------------------
+            pages = []
+            full_text = []
+
+            for page_number, page in enumerate(
+                self.doc,
+                start=1
+            ):
+
+                raw_text = page.get_text("text")
+
+                cleaned_text = self.clean_text(
+                    raw_text
+                )
+
+                pages.append({
+                    "page": page_number,
+                    "text": cleaned_text,
+                    "word_count": len(
+                        cleaned_text.split()
+                    ),
+                    "character_count": len(
+                        cleaned_text
+                    )
+                })
+
+                full_text.append(
+                    cleaned_text
+                )
+
+            return pages, "\n".join(full_text)
+
+        except Exception as e:
+
+            raise ValueError(
+                f"Unable to read PDF: {e}"
+            )
+
+        finally:
+
+            if self.doc is not None:
+                self.doc.close()
+                self.doc = None
+
+    # ==========================================================
+    # DOCX Extraction
+    # ==========================================================
+
+    def parse_docx(self):
+
+        try:
+
+            document = Document(
+                str(self.file_path)
+            )
+
+            content = []
+
+            # Paragraphs
+            for paragraph in document.paragraphs:
+
+                text = self.clean_text(
+                    paragraph.text
+                )
+
+                if text:
+                    content.append(text)
+
+            # Tables
+            for table in document.tables:
+
+                for row in table.rows:
+
+                    row_content = []
+
+                    for cell in row.cells:
+
+                        cell_text = self.clean_text(
+                            cell.text
+                        )
+
+                        if cell_text:
+                            row_content.append(
+                                cell_text
+                            )
+
+                    if row_content:
+
+                        content.append(
+                            " | ".join(row_content)
+                        )
+
+            complete_text = self.clean_text(
+                "\n".join(content)
+            )
+
+            pages = [{
+                "page": 1,
+                "text": complete_text,
+                "word_count": len(
+                    complete_text.split()
+                ),
+                "character_count": len(
+                    complete_text
+                )
+            }]
+
+            return pages, complete_text
+
+        except Exception as e:
+
+            raise ValueError(
+                f"Unable to read DOCX: {e}"
+            )
+
+    # ==========================================================
+    # TXT Extraction
+    # ==========================================================
+
+    def parse_txt(self):
+
+        encodings = [
+            "utf-8",
+            "utf-8-sig",
+            "cp1252",
+            "latin-1"
+        ]
+
+        text = None
+
+        for encoding in encodings:
+
+            try:
+
+                with open(
+                    self.file_path,
+                    "r",
+                    encoding=encoding
+                ) as file:
+
+                    text = file.read()
+
+                break
+
+            except UnicodeDecodeError:
+                continue
+
+        if text is None:
+            raise ValueError(
+                "Unable to decode TXT file."
+            )
+
+        text = self.clean_text(text)
+
+        pages = [{
+            "page": 1,
+            "text": text,
+            "word_count": len(
+                text.split()
+            ),
+            "character_count": len(text)
+        }]
+
+        return pages, text
+
+    # ==========================================================
+    # Pasted Text
+    # ==========================================================
+
+    def parse_text(self):
+
+        self.validate_text()
+
+        text = self.clean_text(
+            self.text_input
+        )
+
+        pages = [{
+            "page": 1,
+            "text": text,
+            "word_count": len(
+                text.split()
+            ),
+            "character_count": len(text)
+        }]
+
+        return pages, text
+
+    # ==========================================================
+    # Metadata
+    # ==========================================================
+
+    def extract_metadata(self):
+
+        if self.extension == ".pdf":
+
+            try:
+
+                doc = fitz.open(
+                    str(self.file_path)
+                )
+
+                metadata = doc.metadata or {}
+
+                result = {
+                    "title": metadata.get(
+                        "title"
+                    ),
+                    "author": metadata.get(
+                        "author"
+                    ),
+                    "creator": metadata.get(
+                        "creator"
+                    ),
+                    "producer": metadata.get(
+                        "producer"
+                    ),
+                    "subject": metadata.get(
+                        "subject"
+                    ),
+                    "keywords": metadata.get(
+                        "keywords"
+                    )
+                }
+
+                doc.close()
+
+                return result
+
+            except Exception:
+
+                return {}
+
+        elif self.extension == ".docx":
+
+            try:
+
+                document = Document(
+                    str(self.file_path)
+                )
+
+                properties = (
+                    document.core_properties
+                )
+
+                return {
+                    "title": properties.title,
+                    "author": properties.author,
+                    "subject": properties.subject,
+                    "keywords": properties.keywords,
+                    "comments": properties.comments,
+                    "last_modified_by":
+                        properties.last_modified_by
+                }
+
+            except Exception:
+
+                return {}
+
+        # TXT and pasted text
+        return {}
+
+    # ==========================================================
     # Statistics
-    # ----------------------------
-    def get_statistics(self, text):
-        words = len(text.split())
-        chars = len(text)
-        paragraphs = len([p for p in text.split("\n") if p.strip()])
-        reading = max(1, round(words / 200))
+    # ==========================================================
+
+    def get_statistics(
+        self,
+        text,
+        pages
+    ):
+
+        words = len(
+            text.split()
+        )
+
+        characters = len(text)
+
+        paragraphs = len([
+            p
+            for p in text.split("\n")
+            if p.strip()
+        ])
+
+        reading_time = max(
+            1,
+            round(words / 200)
+        )
 
         return {
-            "pages": len(self.doc),
+            "pages": len(pages),
             "words": words,
-            "characters": chars,
+            "characters": characters,
             "paragraphs": paragraphs,
-            "estimated_reading_minutes": reading,
+            "estimated_reading_minutes":
+                reading_time
         }
 
-    # ----------------------------
-    # Language
-    # ----------------------------
+    # ==========================================================
+    # Language Detection
+    # ==========================================================
+
     def detect_language(self, text):
-        try:
-            return detect(text)
-        except LangDetectException:
+
+        if not text or len(
+            text.strip()
+        ) < 20:
+
             return "unknown"
 
-    # ----------------------------
-    # Searchable or Scanned
-    # ----------------------------
-    def detect_pdf_type(self):
-        searchable = 0
+        try:
 
-        for page in self.doc:
-            if page.get_text().strip():
-                searchable += 1
+            return detect(text)
 
-        if searchable == len(self.doc):
-            return "Searchable PDF"
+        except LangDetectException:
 
-        return "Scanned / OCR Required"
+            return "unknown"
 
-    # ----------------------------
-    # Images
-    # ----------------------------
-    def extract_images(self, output_dir="outputs/images"):
-        os.makedirs(output_dir, exist_ok=True)
+        except Exception:
 
-        image_paths = []
+            return "unknown"
 
-        for page_index in range(len(self.doc)):
-            images = self.doc[page_index].get_images(full=True)
+    # ==========================================================
+    # Document Type
+    # ==========================================================
 
-            for img_index, img in enumerate(images):
-                xref = img[0]
-                pix = fitz.Pixmap(self.doc, xref)
+    def detect_document_type(self):
 
-                if pix.n >= 5:
-                    pix = fitz.Pixmap(fitz.csRGB, pix)
+        if self.extension == ".pdf":
 
-                name = f"page_{page_index+1}_{img_index+1}.png"
-                path = os.path.join(output_dir, name)
+            try:
 
-                pix.save(path)
-                image_paths.append(path)
+                doc = fitz.open(
+                    str(self.file_path)
+                )
 
-        return image_paths
+                total_pages = (
+                    doc.page_count
+                )
 
-    # ----------------------------
-    # Tables
-    # ----------------------------
-    def extract_tables(self):
-        tables = []
+                pages_with_text = 0
 
-        with pdfplumber.open(self.pdf_path) as pdf:
-            for page_no, page in enumerate(pdf.pages):
-                page_tables = page.extract_tables()
+                for page in doc:
 
-                if page_tables:
-                    tables.append(
-                        {
-                            "page": page_no + 1,
-                            "tables": page_tables
-                        }
-                    )
+                    if page.get_text(
+                        "text"
+                    ).strip():
 
-        return tables
+                        pages_with_text += 1
 
-    # ----------------------------
-    # File Info
-    # ----------------------------
-    def file_info(self):
-        size = round(self.file_path.stat().st_size / (1024 * 1024), 2)
+                doc.close()
+
+                if pages_with_text == total_pages:
+                    return "Searchable PDF"
+
+                elif pages_with_text == 0:
+                    return "Scanned / OCR Required"
+
+                else:
+                    return "Mixed PDF"
+
+            except Exception:
+
+                return "PDF"
+
+        elif self.extension == ".docx":
+
+            return "DOCX Document"
+
+        elif self.extension == ".txt":
+
+            return "Text Document"
+
+        elif self.text_input is not None:
+
+            return "Pasted Text"
+
+        return "Unknown"
+
+    # ==========================================================
+    # File Information
+    # ==========================================================
+
+    def get_file_info(self):
+
+        if self.file_path is None:
+
+            return {
+                "file_name": "Pasted Text",
+                "file_extension": None,
+                "file_size_bytes": None,
+                "file_size_mb": None
+            }
+
+        size_bytes = (
+            self.file_path.stat().st_size
+        )
 
         return {
-            "file_name": self.file_path.name,
-            "file_size_mb": size,
+            "file_name":
+                self.file_path.name,
+
+            "file_extension":
+                self.extension,
+
+            "file_size_bytes":
+                size_bytes,
+
+            "file_size_mb":
+                round(
+                    size_bytes /
+                    (1024 * 1024),
+                    2
+                )
         }
 
-    # ----------------------------
-    # Parse
-    # ----------------------------
-    def parse(self,
-              extract_images=False,
-              extract_tables=False):
+    # ==========================================================
+    # Main Parse Function
+    # ==========================================================
 
-        self.validate_file()
-        self.open_pdf()
-
-        pages, full_text = self.extract_text()
-
-        data = {
-            "file_info": self.file_info(),
-            "metadata": self.extract_metadata(),
-            "statistics": self.get_statistics(full_text),
-            "language": self.detect_language(full_text),
-            "pdf_type": self.detect_pdf_type(),
-            "pages": pages,
-            "text": full_text,
-            "images": [],
-            "tables": [],
-        }
-
-        if extract_images:
-            data["images"] = self.extract_images()
-
-        if extract_tables:
-            data["tables"] = self.extract_tables()
-
-        self.doc.close()
-
-        return data
-
-
-if __name__ == "__main__":
-    parser = PDFParser("sample.pdf")
-
-    result = parser.parse(
+    def parse(
+        self,
         extract_images=False,
         extract_tables=False
-    )
+    ):
 
-    print(result["file_info"])
-    print(result["statistics"])
+        # ------------------------------------------------------
+        # Determine Input
+        # ------------------------------------------------------
+
+        if self.text_input is not None:
+
+            pages, full_text = (
+                self.parse_text()
+            )
+
+        else:
+
+            self.validate_file()
+
+            if self.extension == ".pdf":
+
+                pages, full_text = (
+                    self.parse_pdf()
+                )
+
+            elif self.extension == ".docx":
+
+                pages, full_text = (
+                    self.parse_docx()
+                )
+
+            elif self.extension == ".txt":
+
+                pages, full_text = (
+                    self.parse_txt()
+                )
+
+            else:
+
+                raise ValueError(
+                    "Unsupported document format."
+                )
+
+        # ------------------------------------------------------
+        # Common Processing
+        # ------------------------------------------------------
+
+        statistics = self.get_statistics(
+            full_text,
+            pages
+        )
+
+        result = {
+
+            "file_info":
+                self.get_file_info(),
+
+            "metadata":
+                self.extract_metadata(),
+
+            "statistics":
+                statistics,
+
+            "language":
+                self.detect_language(
+                    full_text
+                ),
+
+            "document_type":
+                self.detect_document_type(),
+
+            "pages":
+                pages,
+
+            "text":
+                full_text,
+
+            "images":
+                [],
+
+            "tables":
+                []
+        }
+
+        # ------------------------------------------------------
+        # Optional PDF Images
+        # ------------------------------------------------------
+
+        if (
+            extract_images
+            and self.extension == ".pdf"
+        ):
+
+            result["images"] = (
+                self.extract_images()
+            )
+
+        # ------------------------------------------------------
+        # Optional Tables
+        # ------------------------------------------------------
+
+        if extract_tables:
+
+            result["tables"] = (
+                self.extract_tables()
+            )
+
+        return result

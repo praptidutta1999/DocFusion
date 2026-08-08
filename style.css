@@ -1,411 +1,474 @@
 /* ==========================================
-   Global
-========================================== */
+   GLOBAL
+   ========================================== */
 
-body{
-    font-family:Arial, Helvetica, sans-serif;
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(109, 77, 255, 0.06), transparent 28%),
+        radial-gradient(circle at 85% 20%, rgba(63, 198, 183, 0.05), transparent 25%),
+        #f7f8fc;
 }
 
-.gradio-container{
-    background:#f7f8fc;
-}
-
-
-/* ==========================================
-   Header
-========================================== */
-
-.header{
-
-    text-align:center;
-
-    margin-bottom:30px;
-
-}
-
-.header h1{
-
-    font-size:42px;
-
-    margin-bottom:10px;
-
-}
-
-.header p{
-
-    color:#777;
-
-    font-size:16px;
-
+.gradio-container {
+    background: transparent;
 }
 
 
 /* ==========================================
-   Main Card
-========================================== */
+   HEADER
+   ========================================== */
 
-.main-card{
+.header {
+    text-align: center;
+    margin-bottom: 26px;
+}
 
-    background:white;
+.header h1 {
+    font-size: 38px;
+    margin: 0 0 8px;
+}
 
-    border-radius:25px;
-
-    padding:30px;
-
-    box-shadow:0 8px 30px rgba(0,0,0,.08);
-
+.header p {
+    color: #777;
+    font-size: 15px;
+    margin: 0;
 }
 
 
 /* ==========================================
-   Upload Wrapper
-========================================== */
+   MAIN GLASS CARD
+   ========================================== */
 
-.upload-wrapper{
-
-    position:relative;
-
+.main-card {
+    background: linear-gradient(
+        135deg,
+        rgba(96, 165, 250, 0.22),
+        rgba(129, 140, 248, 0.20),
+        rgba(167, 139, 250, 0.18)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 26px;
+    padding: 28px;
+    box-shadow:
+        0 18px 45px rgba(31, 41, 55, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 
 /* ==========================================
-   Upload Box
-========================================== */
+   INPUT HEADING
+   ========================================== */
 
-.upload-box{
+.input-heading {
+    margin-bottom: 16px;
+}
 
-    height:340px;
+.input-heading h2 {
+    margin: 0;
+    font-size: 23px;
+    color: #1f2937;
+}
 
-    border:2px dashed #d6d6ff;
-
-    border-radius:24px;
-
-    background:white;
-
-    display:flex;
-
-    flex-direction:column;
-
-    justify-content:center;
-
-    align-items:center;
-
+.input-heading p {
+    margin: 5px 0 0;
+    color: #6b7280;
+    font-size: 14px;
 }
 
 
 /* ==========================================
-   Upload Icon
+   SINGLE INPUT PILL
+   IMPORTANT:
+   This is a ROW, not a Group.
+   Therefore there is no Group border
+   around another border.
+   ========================================== */
+
+.compact-input-wrapper {
+    width: 100% !important;
+    height: 68px !important;
+    min-height: 68px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    margin: 0 !important;
+    padding: 0 18px 0 12px !important;
+
+    gap: 2px !important;
+
+    background: #ffffff !important;
+
+    border: 2px solid #7c3aed !important;
+    border-radius: 999px !important;
+
+    box-shadow: none !important;
+    outline: none !important;
+
+    overflow: hidden !important;
+}
+
+.compact-input-wrapper:focus-within {
+    border: 2px solid #7c3aed !important;
+    box-shadow: none !important;
+}
+
+
+
+
+/* ==========================================
+   TEXTBOX
+   container=False in Python removes the
+   Gradio outer textbox container.
+   ========================================== */
+
+/* ==========================================
+TEXTBOX
+container=False in Python removes the
+Gradio outer textbox container.
 ========================================== */
 
-.upload-icon{
+.compact-textbox {
+    flex: 1 1 auto !important;
 
-    width:85px;
+    width: auto !important;
+    min-width: 0 !important;
 
-    height:85px;
+    height: 64px !important;
+    min-height: 64px !important;
 
-    border-radius:22px;
+    margin: 0 !important;
+    padding: 0 !important;
 
-    background:linear-gradient(135deg,#4f8dff,#7f4dff);
+    background: transparent !important;
 
-    color:white;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 
-    font-size:42px;
+    border-radius: 0 !important;
 
-    display:flex;
+    /* IMPORTANT */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
 
-    justify-content:center;
 
-    align-items:center;
+.compact-textbox textarea,
+.compact-textbox input {
+    display: block !important;
 
-    margin-bottom:25px;
+    width: 100% !important;
 
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+
+    margin: 0 !important;
+
+    /* CHANGE THIS */
+    padding: 0 8px !important;
+
+    background: #ffffff !important;
+
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    border-radius: 0 !important;
+
+    color: #1f2937 !important;
+    font-size: 20px !important;
+
+    /* IMPORTANT */
+    text-align: left !important;
+
+    line-height: 64px !important;
+
+    resize: none !important;
+    overflow: hidden !important;
+}
+
+
+.compact-textbox textarea::placeholder,
+.compact-textbox input::placeholder {
+    color: #a1a1aa !important;
+    opacity: 1 !important;
+
+    /* IMPORTANT */
+    text-align: left !important;
+}
+
+
+.compact-textbox textarea:focus,
+.compact-textbox input:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    text-align: left !important;
+}
+
+/* ==========================================
+   NATIVE GRADIO UPLOAD BUTTON
+   The + button is a real Gradio UploadButton,
+   so the browser file picker opens reliably.
+   ========================================== */
+
+.plus-button {
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 50px !important;
+
+    flex: 0 0 50px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    border-radius: 50% !important;
+
+    color: #111111 !important;
+    font-size: 34px !important;
+    font-weight: 300 !important;
+    line-height: 1 !important;
+
+    cursor: pointer !important;
+    user-select: none !important;
+    flex-shrink: 0 !important;
+}
+
+.plus-button:hover {
+    background: rgba(124, 58, 237, 0.06) !important;
+}
+
+/* Make sure the native Gradio button itself receives the click. */
+.plus-button button,
+.plus-button > button {
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 50px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    color: #111111 !important;
+    cursor: pointer !important;
 }
 
 
 /* ==========================================
-   Upload Title
-========================================== */
+   STATUS
+   ========================================== */
 
-.upload-title{
+.upload-status,
+.paste-status {
+    margin-top: 8px;
+}
 
-    font-size:32px;
+.attachment-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 13px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+}
 
-    font-weight:bold;
+.attachment-icon {
+    font-size: 17px;
+}
 
+.attachment-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.attachment-details {
+    display: flex;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.text-ready-status {
+    display: flex;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 12px;
 }
 
 
 /* ==========================================
-   Upload Subtitle
-========================================== */
+   GENERATE SECTION
+   ========================================== */
 
-.upload-subtitle{
+.generate-header {
+    margin: 34px 0 18px;
+}
 
-    margin-top:10px;
+.generate-header h2 {
+    margin: 0;
+    font-size: 27px;
+    color: #1f2937;
+}
 
-    color:#777;
-
+.generate-header p {
+    margin: 5px 0 0;
+    color: #6b7280;
+    font-size: 14px;
 }
 
 
 /* ==========================================
-   File Badges
-========================================== */
+   TOOL CARDS
+   ========================================== */
 
-.file-badges{
-
-    margin-top:25px;
-
+.tool-card {
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 17px;
+    padding: 20px;
+    transition: .2s ease;
 }
 
-.file-badges span{
+.tool-card:hover {
+    border-color: #d9d5ff;
+    box-shadow: 0 7px 20px rgba(0, 0, 0, .07);
+}
 
-    display:inline-block;
+.tool-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
 
-    margin:6px;
+.tool-info {
+    flex: 1;
+}
 
-    padding:8px 18px;
+.tool-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #ffffff;
+    font-size: 22px;
+}
 
-    border-radius:30px;
+.purple {
+    background: #6d4dff;
+}
 
-    border:1px solid #e5e5e5;
+.green {
+    background: #3fc6b7;
+}
 
-    background:white;
+.orange {
+    background: #ff9332;
+}
 
-    font-weight:600;
+.tool-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 6px;
+}
 
+.tool-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.45;
 }
 
 
 /* ==========================================
-   Invisible Upload Layer
-========================================== */
+   SMALL TOOLS
+   ========================================== */
 
-#real_upload{
-
-    position:absolute;
-
-    inset:0;
-
-    opacity:0;
-
-    z-index:999;
-
+.small-tools {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    margin-bottom: 28px;
 }
 
-#real_upload > .wrap{
-
-    width:100%;
-
-    height:100%;
-
+.small-tool {
+    padding: 10px 18px;
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 13px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: .2s ease;
 }
 
-#real_upload section{
-
-    width:100%;
-
-    height:100%;
-
+.small-tool:hover {
+    border-color: #6d4dff;
+    transform: translateY(-1px);
 }
 
-#real_upload button{
-
-    width:100%;
-
-    height:100%;
-
-    cursor:pointer;
-
-}
-
-
-/* what would you like to generate  */
-/*====================================
-Generate Header
-====================================*/
 
 /* ==========================================
-   What would you like to generate?
-========================================== */
+   RESPONSIVE
+   ========================================== */
 
-/* Header */
+@media (max-width: 700px) {
 
-.generate-header{
-    margin:40px 0 25px;
+    .main-card {
+        padding: 18px;
+    }
+
+    .compact-input-wrapper {
+        height: 62px !important;
+        min-height: 62px !important;
+        padding-left: 8px !important;
+    }
+
+    .plus-button,
+    .plus-button button,
+    .plus-button > button {
+        width: 46px !important;
+        min-width: 46px !important;
+        height: 46px !important;
+        font-size: 31px !important;
+    }
+
+    .compact-textbox,
+    .compact-textbox textarea,
+    .compact-textbox input {
+        height: 58px !important;
+        min-height: 58px !important;
+        max-height: 58px !important;
+        line-height: 58px !important;
+        font-size: 17px !important;
+    }
+
+    .tool-card {
+        margin-bottom: 10px;
+    }
 }
-
-.generate-header h2{
-    margin:0;
-    font-size:30px;
-    font-weight:700;
-    color:#1f2937;
-}
-
-.generate-header p{
-    margin-top:6px;
-    color:#6b7280;
-    font-size:15px;
-}
-
-
-/* Cards */
-
-/* .tool-card{
-    background:#fff;
-    border:1px solid #ececec;
-    border-radius:18px;
-    padding:22px;
-    transition:0.25s ease;
-} */
-
-
-.tool-card{
-    background:#fff;
-    border:1px solid #ececec;
-    border-radius:18px;
-    padding:22px;
-    transition:.25s ease;
-    /* flex:1; */
-}
-
-.tool-card:hover{
-    border-color:#d9d5ff;
-    box-shadow:0 8px 24px rgba(0,0,0,.08);
-}
-
-
-/* Card Layout */
-
-.tool-content{
-    display:flex;
-    align-items:flex-start;
-    gap:18px;
-}
-
-.tool-info{
-    flex:1;
-}
-
-
-/* Icon */
-
-.tool-icon{
-    width:52px;
-    height:52px;
-
-    border-radius:14px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    flex-shrink:0;
-
-    color:#ffffff;
-    font-size:24px;
-}
-
-
-/* Icon Colors */
-
-.purple{
-    background:#6d4dff;
-}
-
-.green{
-    background:#3fc6b7;
-}
-
-.orange{
-    background:#ff9332;
-}
-
-
-/* Text */
-
-.tool-title{
-    font-size:20px;
-    font-weight:700;
-    color:#1f2937;
-    margin-bottom:8px;
-}
-
-.tool-description{
-    font-size:15px;
-    color:#6b7280;
-    line-height:1.5;
-}
-
-/* what would you like to generate  */
-
-/* ==========================================
-   Small AI Tools
-========================================== */
-
-.small-tools{
-
-    display:flex;
-
-    gap:14px;
-
-    flex-wrap:wrap;
-
-    margin-top:28px;
-
-    margin-bottom:35px;
-
-}
-
-.small-tool{
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:8px;
-
-    padding:12px 22px;
-
-    background:#ffffff;
-
-    border:1px solid #ececec;
-
-    border-radius:14px;
-
-    font-size:14px;
-
-    font-weight:600;
-
-    color:#374151;
-
-    cursor:pointer;
-
-    transition:.25s ease;
-
-}
-
-.small-tool:hover{
-
-    border-color:#6d4dff;
-
-    box-shadow:0 6px 18px rgba(109,77,255,.12);
-
-    transform:translateY(-2px);
-
-}
-
-/* ==========================================
-   Small AI Tools
-========================================== */
-
-/* ============================
-   AI Workspace
-============================ */
-
-/* ===========================
-   AI Workspace
-=========================== */
-

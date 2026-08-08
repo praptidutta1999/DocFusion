@@ -3,3 +3,4 @@ gradio
 pymupdf
 pdfplumber
 langdetect
+python-docx
