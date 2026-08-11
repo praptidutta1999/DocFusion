@@ -346,13 +346,86 @@ Gradio outer textbox container.
     background: #ffffff;
     border: 1px solid #ececec;
     border-radius: 17px;
-    padding: 20px;
+    padding: 0 !important;
+    overflow: hidden;
     transition: .2s ease;
 }
 
 .tool-card:hover {
     border-color: #d9d5ff;
     box-shadow: 0 7px 20px rgba(0, 0, 0, .07);
+}
+
+
+/* ---------------------------------------------------------
+   Generation cards + processing time
+   --------------------------------------------------------- */
+
+.generation-cards-row {
+    align-items: stretch !important;
+    gap: 22px !important;
+}
+
+.generation-cards-row > .tool-card {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+}
+
+.tool-card-button {
+    width: 100% !important;
+    min-height: 112px !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 17px 17px 0 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+.tool-timing-slot {
+    min-height: 32px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.tool-timing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.tool-timing strong {
+    color: #334155;
+    font-weight: 700;
+}
+
+.timing-icon {
+    font-size: 12px;
+}
+
+.tool-timing-info {
+    color: #64748b;
+}
+
+
+/* ---------------------------------------------------------
+   Hide Gradio's built-in processing outline/runtime.
+   Our own timing is displayed inside the selected card.
+   --------------------------------------------------------- */
+
+.gradio-container .pending,
+.gradio-container .generating,
+.gradio-container .progress-bar,
+.gradio-container .progress-text {
+    outline: none !important;
 }
 
 .tool-content {
@@ -466,6 +539,15 @@ Gradio outer textbox container.
         max-height: 58px !important;
         line-height: 58px !important;
         font-size: 17px !important;
+    }
+
+    .generation-cards-row {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .generation-cards-row > .tool-card {
+        width: 100% !important;
     }
 
     .tool-card {
@@ -773,5 +855,287 @@ Gradio outer textbox container.
 
     .workspace-action-button {
         width: 100% !important;
+    }
+}
+
+/* =========================================================
+   DOCFUSION AI - MODEL SELECTION WORKSPACE
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   Remove Gradio's processing / focus outlines from the
+   workspace. The workspace uses its own timing KPI.
+   --------------------------------------------------------- */
+
+.workspace-page .pending,
+.workspace-page .generating,
+.workspace-page .progress-bar,
+.workspace-page .progress-text,
+.workspace-page .progress,
+.workspace-page [data-testid="block-info"] {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Prevent the old timing slot from becoming an orange box. */
+.workspace-page .tool-timing-slot {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+/* ---------------------------------------------------------
+   Model selector
+   --------------------------------------------------------- */
+
+.model-selector-card {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 18px !important;
+    padding: 18px 20px !important;
+    margin-bottom: 16px !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04) !important;
+}
+
+.model-selector-row {
+    align-items: center !important;
+    gap: 22px !important;
+}
+
+.model-selector-copy {
+    flex: 1 1 auto !important;
+}
+
+.model-selector-title {
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.model-selector-description {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.model-dropdown {
+    flex: 0 0 310px !important;
+    min-width: 260px !important;
+}
+
+.model-dropdown label {
+    color: #64748b !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+}
+
+.model-dropdown input,
+.model-dropdown button,
+.model-dropdown [role="combobox"] {
+    border-radius: 10px !important;
+    border-color: #d9dce5 !important;
+    box-shadow: none !important;
+}
+
+.model-dropdown input:focus,
+.model-dropdown button:focus,
+.model-dropdown [role="combobox"]:focus {
+    border-color: #7c3aed !important;
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.08) !important;
+}
+
+.selected-model-status-wrapper {
+    margin-top: 10px !important;
+}
+
+.selected-model-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.selected-model-status strong {
+    color: #334155;
+}
+
+.selected-model-dot {
+    color: #7c3aed;
+    font-size: 9px;
+}
+
+/* ---------------------------------------------------------
+   Generate / Regenerate controls
+   --------------------------------------------------------- */
+
+.generation-control-row {
+    gap: 12px !important;
+    margin: 4px 0 16px !important;
+}
+
+.generate-summary-button,
+.regenerate-button {
+    min-height: 46px !important;
+    border-radius: 11px !important;
+    font-weight: 700 !important;
+}
+
+.generate-summary-button {
+    flex: 1 1 auto !important;
+}
+
+.regenerate-button {
+    flex: 0 0 230px !important;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+}
+
+.regenerate-button:hover {
+    border-color: #7c3aed !important;
+    color: #7c3aed !important;
+    background: #faf7ff !important;
+}
+
+/* ---------------------------------------------------------
+   Timing line
+   --------------------------------------------------------- */
+
+.workspace-timing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 12px;
+    padding: 7px 0;
+}
+
+.workspace-timing strong {
+    color: #334155;
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+   Summary KPI cards
+   --------------------------------------------------------- */
+
+.summary-kpis {
+    margin-top: 18px !important;
+}
+
+.summary-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.summary-kpi-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 15px 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 13px;
+}
+
+.summary-kpi-label {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    margin-bottom: 5px;
+}
+
+.summary-kpi-value {
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.25;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.summary-kpi-value.model-kpi {
+    font-size: 14px;
+}
+
+.summary-kpi-sub {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+/* ---------------------------------------------------------
+   Dynamic model information
+   --------------------------------------------------------- */
+
+.dynamic-model-info {
+    margin-top: 18px !important;
+}
+
+.dynamic-model-info .model-info-card {
+    margin-top: 0 !important;
+}
+
+.workspace-status {
+    margin-top: 10px !important;
+    color: #64748b;
+    font-size: 12px;
+}
+
+/* ---------------------------------------------------------
+   Keep the result card clean while generating
+   --------------------------------------------------------- */
+
+.summary-result-card {
+    position: relative;
+}
+
+.summary-result-card button:focus,
+.summary-result-card textarea:focus,
+.summary-result-card input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* ---------------------------------------------------------
+   Mobile
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .model-selector-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .model-dropdown {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .generation-control-row {
+        flex-direction: column !important;
+    }
+
+    .generate-summary-button,
+    .regenerate-button {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+    }
+
+    .summary-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

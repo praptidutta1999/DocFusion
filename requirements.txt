@@ -5,3 +5,4 @@ pdfplumber
 langdetect
 python-docx
 requests
+
