@@ -5,6 +5,7 @@ import tempfile
 import time
 
 from Parser import DocumentParser
+from Speech import generate_speech
 
 # =========================================================
 # COLAB BACKEND
@@ -88,6 +89,50 @@ def parse_document_input(file, pasted_text):
         )
 
     return document_text
+
+
+def cache_document_text(file, pasted_text):
+    """
+    Parse the current input and cache only the extracted text.
+
+    This prevents later workspace buttons (especially Text to Speech)
+    from passing the original Gradio UploadButton file through the event
+    again. The TTS workspace therefore works from document_text_state.
+    """
+    try:
+        return parse_document_input(file, pasted_text)
+    except Exception:
+        return ""
+
+
+def open_speech_workspace(document_text):
+    """
+    Open the TTS workspace using already-cached document text.
+
+    Important: this function intentionally does not receive upload_file.
+    That prevents Gradio from trying to re-cache/hash the original
+    uploaded file when the Text-to-Speech card is clicked.
+    """
+    if not document_text or not document_text.strip():
+        return (
+            gr.update(visible=True),
+            gr.update(visible=False),
+            None,
+            "",
+            "<div class='workspace-status-error'>Please upload a document or paste text first.</div>",
+            "",
+            "",
+        )
+
+    return (
+        gr.update(visible=False),
+        gr.update(visible=True),
+        None,
+        "",
+        "",
+        "",
+        document_text,
+    )
 
 
 def generate_summary_from_text(
@@ -492,6 +537,227 @@ def show_image_click():
     """
 
 
+
+
+# =========================================================
+# SPEECH HELPERS
+# =========================================================
+
+SPEECH_MODEL_NAMES = {
+    "mms_tts_eng": "MMS-TTS English",
+    "speecht5": "SpeechT5",
+}
+
+
+def speech_model_selection_changed(model):
+    model = model or "mms_tts_eng"
+    display = SPEECH_MODEL_NAMES.get(model, model)
+    return f"""
+    <div class="selected-model-status">
+        <span class="selected-model-dot">●</span>
+        <span>Selected model:</span>
+        <strong>{display}</strong>
+    </div>
+    """
+
+
+def prepare_speech_workspace(file, pasted_text):
+    try:
+        document_text = parse_document_input(file, pasted_text)
+        return (
+            gr.update(visible=False),
+            gr.update(visible=True),
+            "",
+            "",
+            "",
+            "",
+            document_text,
+        )
+    except Exception as e:
+        return (
+            gr.update(visible=True),
+            gr.update(visible=False),
+            "",
+            "",
+            f"<div class='workspace-status-error'>Input Error: {str(e)}</div>",
+            "",
+            "",
+        )
+
+
+def generate_speech_from_text(document_text, selected_model):
+    """
+    Generate speech from already-cached document text.
+
+    This is a generator so the UI immediately shows the selected
+    speech model and a "Generating..." status before the Colab
+    TTS request starts.
+    """
+    start = time.perf_counter()
+    selected_model = selected_model or "mms_tts_eng"
+    model_display = SPEECH_MODEL_NAMES.get(
+        selected_model,
+        selected_model
+    )
+
+    if selected_model not in SPEECH_MODEL_NAMES:
+        selected_model = "mms_tts_eng"
+        model_display = SPEECH_MODEL_NAMES[selected_model]
+
+    if not document_text or not document_text.strip():
+        yield (
+            None,
+            "",
+            "",
+            "<div class='workspace-status-error'>"
+            "No text is available. Please go back and enter or paste text."
+            "</div>"
+        )
+        return
+
+    # -----------------------------------------------------
+    # Immediate UI feedback BEFORE the Colab request.
+    # -----------------------------------------------------
+    action_text = f"⏳ Generating speech with {model_display}..."
+
+    yield (
+        None,
+        f"""
+        <div class="summary-kpi-row">
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">STATUS</span>
+                <span class="summary-kpi-value">Generating...</span>
+                <span class="summary-kpi-sub">{model_display}</span>
+            </div>
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">TEXT LENGTH</span>
+                <span class="summary-kpi-value">{len(document_text.split())}</span>
+                <span class="summary-kpi-sub">Words spoken</span>
+            </div>
+        </div>
+        """,
+        f"""
+        <div class="model-info-card">
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">{model_display}</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Status</span>
+                <span class="model-info-value">Generating...</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Inference</span>
+                <span class="model-info-value">Colab TTS Backend</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Task</span>
+                <span class="model-info-value">Text-to-Speech</span>
+            </div>
+        </div>
+        """,
+        f"<div class='workspace-status'>{action_text}<br>"
+        "Please wait while the AI generates your speech.</div>"
+    )
+
+    try:
+        audio_path, backend_time = generate_speech(
+            document_text,
+            selected_model
+        )
+
+        elapsed = time.perf_counter() - start
+
+        backend_text = (
+            f"{backend_time:.2f}s"
+            if isinstance(backend_time, (int, float))
+            else "—"
+        )
+
+        kpis = f"""
+        <div class="summary-kpi-row">
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">PROCESSING TIME</span>
+                <span class="summary-kpi-value">{elapsed:.2f}s</span>
+                <span class="summary-kpi-sub">End-to-end</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">MODEL</span>
+                <span class="summary-kpi-value model-kpi">{model_display}</span>
+                <span class="summary-kpi-sub">Selected model</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">TEXT LENGTH</span>
+                <span class="summary-kpi-value">{len(document_text.split())}</span>
+                <span class="summary-kpi-sub">Words spoken</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">BACKEND TIME</span>
+                <span class="summary-kpi-value">{backend_text}</span>
+                <span class="summary-kpi-sub">Colab inference</span>
+            </div>
+        </div>
+        """
+
+        model_info = f"""
+        <div class="model-info-card">
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">{model_display}</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Inference</span>
+                <span class="model-info-value">Colab TTS Backend</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Task</span>
+                <span class="model-info-value">Text-to-Speech</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Backend Time</span>
+                <span class="model-info-value">{backend_text}</span>
+            </div>
+        </div>
+        """
+
+        yield (
+            audio_path,
+            kpis,
+            model_info,
+            f"<div class='workspace-status'>"
+            f"Speech generated with {model_display} in {elapsed:.2f}s."
+            f"</div>"
+        )
+
+    except requests.exceptions.RequestException as e:
+        elapsed = time.perf_counter() - start
+        yield (
+            None,
+            "",
+            "",
+            f"<div class='workspace-status-error'>"
+            f"Colab connection failed: {str(e)}"
+            f"</div>"
+        )
+
+    except Exception as e:
+        yield (
+            None,
+            "",
+            "",
+            f"<div class='workspace-status-error'>"
+            f"Speech generation failed: {str(e)}"
+            f"</div>"
+        )
+
+
+def go_back_home_from_speech():
+    return gr.update(visible=True), gr.update(visible=False)
+
+
 # =========================================================
 # UI
 # =========================================================
@@ -581,12 +847,22 @@ with gr.Blocks(
                 fn=show_uploaded_file,
                 inputs=upload_file,
                 outputs=upload_status
+            ).then(
+                fn=cache_document_text,
+                inputs=[upload_file, pasted_text],
+                outputs=document_text_state,
+                show_progress="hidden"
             )
 
             pasted_text.change(
                 fn=show_pasted_text,
                 inputs=pasted_text,
                 outputs=paste_status
+            ).then(
+                fn=cache_document_text,
+                inputs=[upload_file, pasted_text],
+                outputs=document_text_state,
+                show_progress="hidden"
             )
 
         # -------------------------------------------------
@@ -646,12 +922,12 @@ with gr.Blocks(
             with gr.Column(
                 elem_classes="tool-card"
             ):
-                gr.Button(
+                speech_button = gr.Button(
                     value="🔊  Text to Speech",
                     elem_classes="tool-card-button"
                 )
 
-                gr.HTML(
+                speech_time = gr.HTML(
                     "",
                     elem_classes="tool-timing-slot"
                 )
@@ -867,6 +1143,103 @@ with gr.Blocks(
 
 
     # =====================================================
+    # TEXT-TO-SPEECH WORKSPACE
+    # =====================================================
+
+    with gr.Column(
+        visible=False,
+        elem_classes="workspace-page speech-workspace"
+    ) as speech_workspace_page:
+
+        with gr.Row(elem_classes="workspace-topbar"):
+            speech_back_button = gr.Button(
+                "← Back",
+                elem_classes="back-button"
+            )
+
+            gr.HTML("""
+            <div class="workspace-title">
+                <h1>AI Workspace</h1>
+                <p>DocFusion AI</p>
+            </div>
+            """)
+
+        gr.HTML("""
+        <div class="workspace-tool-header">
+            <div class="workspace-tool-icon speech-tool-icon">🔊</div>
+            <div>
+                <h2>Text to Speech</h2>
+                <p>Convert your text into natural-sounding speech using a Hugging Face model.</p>
+            </div>
+        </div>
+        """)
+
+        with gr.Column(elem_classes="model-selector-card"):
+            with gr.Row(elem_classes="model-selector-row"):
+                with gr.Column(elem_classes="model-selector-copy"):
+                    gr.HTML("""
+                    <div class="model-selector-title">
+                        Choose Speech Model
+                    </div>
+                    <div class="model-selector-description">
+                        Select a speech model and generate audio from the text in your input box.
+                    </div>
+                    """)
+
+                speech_model_dropdown = gr.Dropdown(
+                    choices=[
+                        ("MMS-TTS English", "mms_tts_eng"),
+                        ("SpeechT5", "speecht5"),
+                    ],
+                    value="mms_tts_eng",
+                    label="Model",
+                    show_label=True,
+                    allow_custom_value=False,
+                    elem_classes="model-dropdown"
+                )
+
+            speech_selected_model_status = gr.HTML(
+                """
+                <div class="selected-model-status">
+                    <span class="selected-model-dot">●</span>
+                    <span>Selected model:</span>
+                    <strong>MMS-TTS English</strong>
+                </div>
+                """,
+                elem_classes="selected-model-status-wrapper"
+            )
+
+        with gr.Row(elem_classes="generation-control-row"):
+            generate_speech_button = gr.Button(
+                "🔊 Generate Speech",
+                variant="primary",
+                elem_classes="generate-summary-button"
+            )
+
+        with gr.Column(elem_classes="summary-result-card speech-result-card"):
+            gr.HTML("""
+            <div class="summary-result-header">
+                <div>
+                    <h3>Generated Speech</h3>
+                    <p>Your generated audio will appear below.</p>
+                </div>
+                <div class="ai-badge speech-badge">AI Generated</div>
+            </div>
+            """)
+
+            speech_audio = gr.Audio(
+                label="Generated Audio",
+                type="filepath",
+                interactive=False,
+                elem_classes="speech-audio"
+            )
+
+        speech_kpis = gr.HTML("", elem_classes="summary-kpis")
+        speech_model_info = gr.HTML("", elem_classes="dynamic-model-info")
+        speech_workspace_status = gr.HTML("", elem_classes="workspace-status")
+
+
+    # =====================================================
     # EVENTS
     # =====================================================
 
@@ -978,6 +1351,51 @@ with gr.Blocks(
         fn=show_image_click,
         inputs=[],
         outputs=[image_time],
+        show_progress="hidden"
+    )
+
+    # -----------------------------------------------------
+    # Text-to-Speech workspace
+    # -----------------------------------------------------
+
+    speech_button.click(
+        fn=open_speech_workspace,
+        inputs=[document_text_state],
+        outputs=[
+            home_page,
+            speech_workspace_page,
+            speech_audio,
+            speech_kpis,
+            speech_workspace_status,
+            speech_model_info,
+            document_text_state,
+        ],
+        show_progress="hidden"
+    )
+
+    generate_speech_button.click(
+        fn=generate_speech_from_text,
+        inputs=[document_text_state, speech_model_dropdown],
+        outputs=[
+            speech_audio,
+            speech_kpis,
+            speech_model_info,
+            speech_workspace_status,
+        ],
+        show_progress="hidden"
+    )
+
+    speech_model_dropdown.change(
+        fn=speech_model_selection_changed,
+        inputs=speech_model_dropdown,
+        outputs=speech_selected_model_status,
+        show_progress="hidden"
+    )
+
+    speech_back_button.click(
+        fn=go_back_home_from_speech,
+        inputs=[],
+        outputs=[home_page, speech_workspace_page],
         show_progress="hidden"
     )
 

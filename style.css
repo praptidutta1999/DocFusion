@@ -1139,3 +1139,39 @@ Gradio outer textbox container.
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* =========================================================
+   DOCFUSION AI - TEXT TO SPEECH WORKSPACE
+   ========================================================= */
+
+.speech-tool-icon {
+    background: #e0f2fe !important;
+}
+
+.speech-result-card {
+    padding-bottom: 24px !important;
+}
+
+.speech-audio {
+    width: 100% !important;
+    margin-top: 8px !important;
+}
+
+.speech-audio audio {
+    width: 100% !important;
+}
+
+.speech-badge {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+
+.workspace-status-error {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 13px;
+}
