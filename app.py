@@ -93,7 +93,8 @@ def parse_document_input(file, pasted_text):
 def generate_summary_from_text(
     document_text,
     selected_model,
-    generation_count=0
+    generation_count=0,
+    regenerate=False
 ):
     """
     Generate a summary from already-parsed text.
@@ -101,7 +102,12 @@ def generate_summary_from_text(
     This is deliberately independent of the UploadButton. The document is
     parsed once when the Summary workspace opens; Generate and Regenerate
     reuse the cached text.
+
+    This function is a generator so the UI can immediately show a clear
+    "Generating..." status while the backend loads/switches models and
+    performs inference.
     """
+
     start_time = time.perf_counter()
 
     selected_model = selected_model or "bart"
@@ -111,6 +117,49 @@ def generate_summary_from_text(
         selected_model = "bart"
 
     model_display = MODEL_NAMES[selected_model]
+
+    action_text = (
+        f"🔄 Regenerating summary with {model_display}..."
+        if regenerate
+        else f"⏳ Generating summary with {model_display}..."
+    )
+
+    # -----------------------------------------------------
+    # Immediate UI feedback.
+    # This yield happens BEFORE the HTTP request, so the user
+    # sees why they need to wait while the model is loading,
+    # switching, or generating.
+    # -----------------------------------------------------
+
+    yield (
+        f"### {action_text}\n\n"
+        "Please wait while the AI processes your document.",
+        None,
+        action_text,
+        "",
+        f"""
+        <div class="model-info-card">
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">{model_display}</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Status</span>
+                <span class="model-info-value">Generating...</span>
+            </div>
+        </div>
+        """,
+        f"""
+        <div class="summary-kpi-row">
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">STATUS</span>
+                <span class="summary-kpi-value">Generating...</span>
+                <span class="summary-kpi-sub">{model_display}</span>
+            </div>
+        </div>
+        """,
+        generation_number,
+    )
 
     def elapsed_seconds():
         return time.perf_counter() - start_time
@@ -224,7 +273,7 @@ def generate_summary_from_text(
         """
 
     if not document_text or not document_text.strip():
-        return (
+        yield (
             "### Error\n\nNo document text is available. Please go back and "
             "upload a document or paste text.",
             None,
@@ -234,17 +283,15 @@ def generate_summary_from_text(
             kpi_html(),
             generation_number,
         )
+        return
 
     try:
-        # -------------------------------------------------
-        # Send cached extracted text + selected model
-        # -------------------------------------------------
-
         response = requests.post(
             f"{COLAB_API}/summarize",
             json={
                 "text": document_text,
                 "model": selected_model,
+                "regenerate": bool(regenerate),
             },
             timeout=600
         )
@@ -275,10 +322,6 @@ def generate_summary_from_text(
 
         backend_time = data.get("processing_time")
 
-        # -------------------------------------------------
-        # Create downloadable text file
-        # -------------------------------------------------
-
         with tempfile.NamedTemporaryFile(
             mode="w",
             suffix=".txt",
@@ -289,7 +332,7 @@ def generate_summary_from_text(
             summary_file.write(summary)
             summary_file_path = summary_file.name
 
-        return (
+        yield (
             summary,
             summary_file_path,
             "",
@@ -300,7 +343,7 @@ def generate_summary_from_text(
         )
 
     except requests.exceptions.RequestException as e:
-        return (
+        yield (
             f"""### Connection Error
 
 Could not connect to the Colab backend.
@@ -318,7 +361,7 @@ Check that FastAPI and the ngrok tunnel are still running.
         )
 
     except Exception as e:
-        return (
+        yield (
             f"""### Error
 
 {str(e)}
@@ -330,7 +373,6 @@ Check that FastAPI and the ngrok tunnel are still running.
             kpi_html(),
             generation_number,
         )
-
 
 def prepare_summary_workspace(file, pasted_text):
     """
@@ -463,6 +505,8 @@ with gr.Blocks(
     generation_state = gr.State(0)
     # Cached extracted document text. Generate/Regenerate reuse this state.
     document_text_state = gr.State("")
+    regenerate_mode = gr.State(False)
+    regenerate_mode_true = gr.State(True)
 
     # =====================================================
     # HOME PAGE
@@ -877,6 +921,7 @@ with gr.Blocks(
             document_text_state,
             model_dropdown,
             generation_state,
+            regenerate_mode,
         ],
         outputs=[
             summary_output,
@@ -900,6 +945,7 @@ with gr.Blocks(
             document_text_state,
             model_dropdown,
             generation_state,
+            regenerate_mode_true,
         ],
         outputs=[
             summary_output,
