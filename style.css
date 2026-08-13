@@ -1175,3 +1175,43 @@ Gradio outer textbox container.
     color: #b91c1c;
     font-size: 13px;
 }
+
+/* =========================================================
+   DOCFUSION AI - TEXT TO IMAGE WORKSPACE
+   ========================================================= */
+
+.image-tool-icon {
+    background: #fef3c7 !important;
+}
+
+.image-result-card {
+    padding-bottom: 24px !important;
+}
+
+.generated-image {
+    width: 100% !important;
+    margin-top: 8px !important;
+}
+
+.generated-image img {
+    width: 100% !important;
+    max-height: 680px !important;
+    object-fit: contain !important;
+    border-radius: 14px !important;
+    background: #f8fafc !important;
+}
+
+.image-badge {
+    background: #fef3c7 !important;
+    color: #b45309 !important;
+}
+
+.image-workspace .workspace-tool-header p {
+    max-width: 760px;
+}
+
+@media (max-width: 700px) {
+    .generated-image img {
+        max-height: 460px !important;
+    }
+}

@@ -6,6 +6,7 @@ import time
 
 from Parser import DocumentParser
 from Speech import generate_speech
+from Image import generate_image
 
 # =========================================================
 # COLAB BACKEND
@@ -528,15 +529,221 @@ def model_selection_changed(model):
     """
 
 
-def show_image_click():
-    return """
-    <div class="tool-timing tool-timing-info">
-        <span class="timing-icon">⏱</span>
-        <span>Image generation selected</span>
+# =========================================================
+# IMAGE HELPERS
+# =========================================================
+
+IMAGE_MODEL_NAMES = {
+    "sd15": "Stable Diffusion v1.5",
+    "sdxl": "Stable Diffusion XL 1.0",
+}
+
+
+def image_model_selection_changed(model):
+    model = model or "sd15"
+    display = IMAGE_MODEL_NAMES.get(model, model)
+    return f"""
+    <div class="selected-model-status">
+        <span class="selected-model-dot">●</span>
+        <span>Selected model:</span>
+        <strong>{display}</strong>
     </div>
     """
 
 
+def open_image_workspace(document_text):
+    """
+    Open the image workspace using already-cached document text.
+
+    The original UploadButton file is not passed through this event, matching
+    the Text-to-Speech workflow and avoiding Gradio file lifecycle issues.
+    """
+    if not document_text or not document_text.strip():
+        return (
+            gr.update(visible=True),
+            gr.update(visible=False),
+            None,
+            "",
+            "",
+            "<div class='workspace-status-error'>"
+            "Please upload a document or paste text first."
+            "</div>",
+            "",
+        )
+
+    return (
+        gr.update(visible=False),
+        gr.update(visible=True),
+        None,
+        "",
+        "",
+        "",
+        document_text,
+    )
+
+
+def generate_image_from_text(document_text, selected_model):
+    """
+    Generate an image from already-cached document text.
+
+    The local app keeps parsing/UI logic local. Image diffusion inference
+    is performed by the Colab FastAPI backend through Image.py.
+    """
+    start = time.perf_counter()
+    selected_model = selected_model or "sd15"
+    model_display = IMAGE_MODEL_NAMES.get(selected_model, selected_model)
+
+    if selected_model not in IMAGE_MODEL_NAMES:
+        selected_model = "sd15"
+        model_display = IMAGE_MODEL_NAMES[selected_model]
+
+    if not document_text or not document_text.strip():
+        yield (
+            None,
+            "",
+            "",
+            "<div class='workspace-status-error'>"
+            "No text is available. Please go back and enter or paste text."
+            "</div>",
+        )
+        return
+
+    action_text = f"⏳ Generating image with {model_display}..."
+
+    yield (
+        None,
+        f"""
+        <div class="summary-kpi-row">
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">STATUS</span>
+                <span class="summary-kpi-value">Generating...</span>
+                <span class="summary-kpi-sub">{model_display}</span>
+            </div>
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">TEXT LENGTH</span>
+                <span class="summary-kpi-value">{len(document_text.split())}</span>
+                <span class="summary-kpi-sub">Input words</span>
+            </div>
+        </div>
+        """,
+        f"""
+        <div class="model-info-card">
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">{model_display}</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Status</span>
+                <span class="model-info-value">Generating...</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Inference</span>
+                <span class="model-info-value">Colab Image Backend</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Task</span>
+                <span class="model-info-value">Text-to-Image</span>
+            </div>
+        </div>
+        """,
+        f"<div class='workspace-status'>{action_text}<br>"
+        "Please wait while the AI generates your image.</div>",
+    )
+
+    try:
+        image_path, backend_time = generate_image(
+            document_text,
+            selected_model,
+        )
+
+        elapsed = time.perf_counter() - start
+        backend_text = (
+            f"{backend_time:.2f}s"
+            if isinstance(backend_time, (int, float))
+            else "—"
+        )
+
+        kpis = f"""
+        <div class="summary-kpi-row">
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">PROCESSING TIME</span>
+                <span class="summary-kpi-value">{elapsed:.2f}s</span>
+                <span class="summary-kpi-sub">End-to-end</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">MODEL</span>
+                <span class="summary-kpi-value model-kpi">{model_display}</span>
+                <span class="summary-kpi-sub">Selected model</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">TEXT LENGTH</span>
+                <span class="summary-kpi-value">{len(document_text.split())}</span>
+                <span class="summary-kpi-sub">Input words</span>
+            </div>
+
+            <div class="summary-kpi-card">
+                <span class="summary-kpi-label">BACKEND TIME</span>
+                <span class="summary-kpi-value">{backend_text}</span>
+                <span class="summary-kpi-sub">Colab inference</span>
+            </div>
+        </div>
+        """
+
+        model_info = f"""
+        <div class="model-info-card">
+            <div class="model-info-item">
+                <span class="model-info-label">Model</span>
+                <span class="model-info-value">{model_display}</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Inference</span>
+                <span class="model-info-value">Colab Image Backend</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Task</span>
+                <span class="model-info-value">Text-to-Image</span>
+            </div>
+            <div class="model-info-item">
+                <span class="model-info-label">Backend Time</span>
+                <span class="model-info-value">{backend_text}</span>
+            </div>
+        </div>
+        """
+
+        yield (
+            image_path,
+            kpis,
+            model_info,
+            f"<div class='workspace-status'>"
+            f"Image generated with {model_display} in {elapsed:.2f}s."
+            f"</div>",
+        )
+
+    except requests.exceptions.RequestException as e:
+        yield (
+            None,
+            "",
+            "",
+            f"<div class='workspace-status-error'>"
+            f"Colab connection failed: {str(e)}"
+            f"</div>",
+        )
+
+    except Exception as e:
+        yield (
+            None,
+            "",
+            "",
+            f"<div class='workspace-status-error'>"
+            f"Image generation failed: {str(e)}"
+            f"</div>",
+        )
+
+
+def go_back_home_from_image():
+    return gr.update(visible=True), gr.update(visible=False)
 
 
 # =========================================================
@@ -1143,6 +1350,103 @@ with gr.Blocks(
 
 
     # =====================================================
+    # TEXT-TO-IMAGE WORKSPACE
+    # =====================================================
+
+    with gr.Column(
+        visible=False,
+        elem_classes="workspace-page image-workspace"
+    ) as image_workspace_page:
+
+        with gr.Row(elem_classes="workspace-topbar"):
+            image_back_button = gr.Button(
+                "← Back",
+                elem_classes="back-button"
+            )
+
+            gr.HTML("""
+            <div class="workspace-title">
+                <h1>AI Workspace</h1>
+                <p>DocFusion AI</p>
+            </div>
+            """)
+
+        gr.HTML("""
+        <div class="workspace-tool-header">
+            <div class="workspace-tool-icon image-tool-icon">🖼️</div>
+            <div>
+                <h2>Text to Image</h2>
+                <p>Transform your document content into an AI-generated visual using a Hugging Face diffusion model.</p>
+            </div>
+        </div>
+        """)
+
+        with gr.Column(elem_classes="model-selector-card"):
+            with gr.Row(elem_classes="model-selector-row"):
+                with gr.Column(elem_classes="model-selector-copy"):
+                    gr.HTML("""
+                    <div class="model-selector-title">
+                        Choose Image Model
+                    </div>
+                    <div class="model-selector-description">
+                        Select an image model and generate a visual from the text already extracted from your document.
+                    </div>
+                    """)
+
+                image_model_dropdown = gr.Dropdown(
+                    choices=[
+                        ("Stable Diffusion v1.5", "sd15"),
+                        ("Stable Diffusion XL 1.0", "sdxl"),
+                    ],
+                    value="sd15",
+                    label="Model",
+                    show_label=True,
+                    allow_custom_value=False,
+                    elem_classes="model-dropdown"
+                )
+
+            image_selected_model_status = gr.HTML(
+                """
+                <div class="selected-model-status">
+                    <span class="selected-model-dot">●</span>
+                    <span>Selected model:</span>
+                    <strong>Stable Diffusion v1.5</strong>
+                </div>
+                """,
+                elem_classes="selected-model-status-wrapper"
+            )
+
+        with gr.Row(elem_classes="generation-control-row"):
+            generate_image_workspace_button = gr.Button(
+                "🖼️ Generate Image",
+                variant="primary",
+                elem_classes="generate-summary-button"
+            )
+
+        with gr.Column(elem_classes="summary-result-card image-result-card"):
+            gr.HTML("""
+            <div class="summary-result-header">
+                <div>
+                    <h3>Generated Image</h3>
+                    <p>Your generated visual will appear below.</p>
+                </div>
+                <div class="ai-badge image-badge">AI Generated</div>
+            </div>
+            """)
+
+            generated_image = gr.Image(
+                label="Generated Image",
+                type="filepath",
+                interactive=False,
+                elem_classes="generated-image"
+            )
+
+        image_kpis = gr.HTML("", elem_classes="summary-kpis")
+        image_model_info = gr.HTML("", elem_classes="dynamic-model-info")
+        image_workspace_status = gr.HTML("", elem_classes="workspace-status")
+
+
+    # =====================================================
     # TEXT-TO-SPEECH WORKSPACE
     # =====================================================
 
@@ -1344,13 +1648,47 @@ with gr.Blocks(
     )
 
     # -----------------------------------------------------
-    # Image card
+    # Text-to-Image workspace
     # -----------------------------------------------------
 
     generate_image_button.click(
-        fn=show_image_click,
+        fn=open_image_workspace,
+        inputs=[document_text_state],
+        outputs=[
+            home_page,
+            image_workspace_page,
+            generated_image,
+            image_kpis,
+            image_model_info,
+            image_workspace_status,
+            document_text_state,
+        ],
+        show_progress="hidden"
+    )
+
+    generate_image_workspace_button.click(
+        fn=generate_image_from_text,
+        inputs=[document_text_state, image_model_dropdown],
+        outputs=[
+            generated_image,
+            image_kpis,
+            image_model_info,
+            image_workspace_status,
+        ],
+        show_progress="hidden"
+    )
+
+    image_model_dropdown.change(
+        fn=image_model_selection_changed,
+        inputs=image_model_dropdown,
+        outputs=image_selected_model_status,
+        show_progress="hidden"
+    )
+
+    image_back_button.click(
+        fn=go_back_home_from_image,
         inputs=[],
-        outputs=[image_time],
+        outputs=[home_page, image_workspace_page],
         show_progress="hidden"
     )
 
